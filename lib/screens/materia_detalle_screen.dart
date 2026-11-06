@@ -23,7 +23,9 @@ class MateriaDetalleScreen extends StatefulWidget {
   });
 
   final Materia materia;
-  final VoidCallback onChanged;
+
+  /// Avisa a HomeScreen para guardar en el teléfono y redibujar.
+  final Future<void> Function() onChanged;
 
   @override
   State<MateriaDetalleScreen> createState() => _MateriaDetalleScreenState();
@@ -52,7 +54,7 @@ class _MateriaDetalleScreenState extends State<MateriaDetalleScreen> {
     setState(() {
       unidadSeleccionada.tareas.add(nuevaTarea);
     });
-    widget.onChanged();
+    await widget.onChanged();
   }
 
   /// El botón + abre un menú inferior con dos opciones:
@@ -108,7 +110,7 @@ class _MateriaDetalleScreenState extends State<MateriaDetalleScreen> {
       // Al crear, seleccionamos automáticamente la nueva unidad.
       _selectedUnitIndex = widget.materia.unidades.length - 1;
     });
-    widget.onChanged();
+    await widget.onChanged();
   }
 
   /// Edita la unidad seleccionada reutilizando el mismo formulario,
@@ -123,7 +125,7 @@ class _MateriaDetalleScreenState extends State<MateriaDetalleScreen> {
     setState(() {
       widget.materia.unidades[_selectedUnitIndex] = editada;
     });
-    widget.onChanged();
+    await widget.onChanged();
   }
 
   /// Elimina la unidad seleccionada tras pedir confirmación.
@@ -156,7 +158,7 @@ class _MateriaDetalleScreenState extends State<MateriaDetalleScreen> {
             : widget.materia.unidades.length - 1;
       }
     });
-    widget.onChanged();
+    await widget.onChanged();
   }
 
   @override
@@ -356,9 +358,16 @@ class _FormularioUnidadState extends State<_FormularioUnidad> {
       );
       return;
     }
+    final Unidad? existente = widget.unidadExistente;
     Navigator.pop(
       context,
-      Unidad(nombre: nombre, iconoClave: _iconoClaveElegida),
+      // Al editar, conservamos las tareas de la unidad original,
+      // si no se perderían (ese era otro bug).
+      Unidad(
+        nombre: nombre,
+        iconoClave: _iconoClaveElegida,
+        tareas: existente?.tareas,
+      ),
     );
   }
 

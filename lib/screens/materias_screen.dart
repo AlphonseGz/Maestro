@@ -5,47 +5,32 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/materia.dart';
-import '../services/materia_storage.dart';
 import '../widgets/materia_card.dart';
 import 'materia_detalle_screen.dart';
 
 /// Pantalla de Materias: lista de tarjetas y botón + para crear.
 ///
-/// Es StatefulWidget porque la lista cambia al añadir materias
-/// y porque carga datos guardados al iniciar.
+/// NO carga ni guarda por su cuenta: recibe la lista compartida
+/// [materias] de HomeScreen y avisa con [onChanged] al cambiar algo.
+/// Así no existen copias desactualizadas que se pisen entre pantallas.
 class MateriasScreen extends StatefulWidget {
-  const MateriasScreen({super.key});
+  const MateriasScreen({
+    super.key,
+    required this.materias,
+    required this.onChanged,
+  });
+
+  /// Lista compartida de materias (la misma que usa To do).
+  final List<Materia> materias;
+
+  /// Avisa a HomeScreen para guardar en el teléfono y redibujar.
+  final Future<void> Function() onChanged;
 
   @override
   State<MateriasScreen> createState() => _MateriasScreenState();
 }
 
 class _MateriasScreenState extends State<MateriasScreen> {
-  /// Lista de materias en memoria. Se carga desde el teléfono
-  /// en initState y se guarda cada vez que añadimos una.
-  List<Materia> _materias = [];
-
-  /// true mientras cargamos desde el teléfono, para mostrar
-  /// un indicador de carga en vez de la lista vacía.
-  bool _cargando = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _cargarMateriasGuardadas();
-  }
-
-  /// Método asíncrono (Future) que lee el teléfono.
-  /// Al terminar, avisa con setState para redibujar la lista.
-  Future<void> _cargarMateriasGuardadas() async {
-    final List<Materia> guardadas = await MateriaStorage.cargarMaterias();
-    if (!mounted) return;
-    setState(() {
-      _materias = guardadas;
-      _cargando = false;
-    });
-  }
-
   /// Método que se ejecuta al pulsar el botón +.
   /// Abre el diálogo para crear una materia nueva.
   Future<void> _abrirFormularioNuevaMateria() async {
@@ -55,28 +40,20 @@ class _MateriasScreenState extends State<MateriasScreen> {
     );
     // Si el usuario canceló, nuevaMateria es null y no hacemos nada.
     if (nuevaMateria == null) return;
-    setState(() {
-      _materias.add(nuevaMateria);
-    });
-    // Guardamos la lista actualizada en el teléfono.
-    await MateriaStorage.guardarMaterias(_materias);
+    widget.materias.add(nuevaMateria);
+    // Guardamos la lista compartida en el teléfono.
+    await widget.onChanged();
   }
 
   /// Al tocar una tarjeta, entramos a su pantalla de detalle.
-  /// Al volver, redibujamos y guardamos (por si añadió unidades).
+  /// Al volver, guardamos (por si añadió unidades o tareas).
   Future<void> _entrarAMateria(Materia materia) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => MateriaDetalleScreen(
-          materia: materia,
-          onChanged: () async {
-            await MateriaStorage.guardarMaterias(_materias);
-            if (mounted) setState(() {});
-          },
-        ),
+        builder: (context) =>
+            MateriaDetalleScreen(materia: materia, onChanged: widget.onChanged),
       ),
     );
-    if (mounted) setState(() {});
   }
 
   /// Edita una materia reutilizando el mismo formulario,
@@ -87,11 +64,9 @@ class _MateriasScreenState extends State<MateriasScreen> {
       builder: (context) => _FormularioMateria(materiaExistente: materia),
     );
     if (editada == null) return;
-    setState(() {
-      final int indice = _materias.indexWhere((m) => m.id == materia.id);
-      if (indice != -1) _materias[indice] = editada;
-    });
-    await MateriaStorage.guardarMaterias(_materias);
+    final int indice = widget.materias.indexWhere((m) => m.id == materia.id);
+    if (indice != -1) widget.materias[indice] = editada;
+    await widget.onChanged();
   }
 
   /// Elimina una materia tras pedir confirmación.
@@ -114,10 +89,8 @@ class _MateriasScreenState extends State<MateriasScreen> {
       ),
     );
     if (confirmar != true) return;
-    setState(() {
-      _materias.removeWhere((m) => m.id == materia.id);
-    });
-    await MateriaStorage.guardarMaterias(_materias);
+    widget.materias.removeWhere((m) => m.id == materia.id);
+    await widget.onChanged();
   }
 
   @override
@@ -132,11 +105,7 @@ class _MateriasScreenState extends State<MateriasScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: _cargando
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF8B3DFF)),
-            )
-          : _materias.isEmpty
+      body: widget.materias.isEmpty
           ? const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -158,9 +127,9 @@ class _MateriasScreenState extends State<MateriasScreen> {
           : ListView.builder(
               // ListView.builder solo dibuja las tarjetas que se ven,
               // ideal si hay muchas materias.
-              itemCount: _materias.length,
+              itemCount: widget.materias.length,
               itemBuilder: (context, index) {
-                final Materia materia = _materias[index];
+                final Materia materia = widget.materias[index];
                 return MateriaCard(
                   materia: materia,
                   onTap: () => _entrarAMateria(materia),

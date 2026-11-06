@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../models/materia.dart';
 import '../models/tarea.dart';
 import '../models/unidad.dart';
-import '../services/materia_storage.dart';
 import '../utils/fecha_formato.dart';
 import '../widgets/formulario_tarea_dialog.dart';
 import '../widgets/tarea_card.dart';
@@ -27,46 +26,27 @@ class _TareaCompleta {
 /// ordenadas por fecha límite (la que vence antes, primera)
 /// y agrupadas por día con un encabezado de fecha.
 ///
-/// Es StatefulWidget porque la lista cambia al completar,
-/// editar o eliminar tareas. Se recarga al entrar a la pestaña
-/// llamando [recargarTareas] desde HomeScreen.
+/// NO carga ni guarda por su cuenta: recibe la lista compartida
+/// [materias] de HomeScreen y avisa con [onChanged] al cambiar algo.
+/// Así no existen copias desactualizadas que se pisen entre pantallas.
 class TodoScreen extends StatefulWidget {
-  const TodoScreen({super.key});
+  const TodoScreen({
+    super.key,
+    required this.materias,
+    required this.onChanged,
+  });
+
+  /// Lista compartida de materias (la misma que usa Materias).
+  final List<Materia> materias;
+
+  /// Avisa a HomeScreen para guardar en el teléfono y redibujar.
+  final Future<void> Function() onChanged;
 
   @override
-  State<TodoScreen> createState() => TodoScreenState();
+  State<TodoScreen> createState() => _TodoScreenState();
 }
 
-class TodoScreenState extends State<TodoScreen> {
-  /// Todas las materias cargadas, para poder guardar cambios
-  /// (completar/editar/eliminar) en el teléfono.
-  List<Materia> _materias = [];
-
-  /// Todas las tareas aplanadas y ordenadas por fecha.
-  List<_TareaCompleta> _tareasOrdenadas = [];
-
-  bool _cargando = true;
-
-  @override
-  void initState() {
-    super.initState();
-    recargarTareas();
-  }
-
-  /// Carga las materias desde el teléfono, aplana sus tareas,
-  /// las ordena por fecha límite y redibuja.
-  /// La llama HomeScreen cada vez que entras a la pestaña To do,
-  /// así siempre ves lo último creado en las unidades.
-  Future<void> recargarTareas() async {
-    final List<Materia> guardadas = await MateriaStorage.cargarMaterias();
-    if (!mounted) return;
-    setState(() {
-      _materias = guardadas;
-      _tareasOrdenadas = _aplanarYOrdenar(guardadas);
-      _cargando = false;
-    });
-  }
-
+class _TodoScreenState extends State<TodoScreen> {
   /// Convierte la lista de materias en una sola lista de tareas
   /// ordenada de la fecha más cercana (antes) a la más lejana.
   List<_TareaCompleta> _aplanarYOrdenar(List<Materia> materias) {
@@ -86,9 +66,11 @@ class TodoScreenState extends State<TodoScreen> {
 
   /// Agrupa las tareas ordenadas por día: devuelve una lista de
   /// días (solo fecha) en orden, cada uno con sus tareas.
-  Map<DateTime, List<_TareaCompleta>> _agruparPorDia() {
+  Map<DateTime, List<_TareaCompleta>> _agruparPorDia(
+    List<_TareaCompleta> tareasOrdenadas,
+  ) {
     final Map<DateTime, List<_TareaCompleta>> grupos = {};
-    for (final _TareaCompleta item in _tareasOrdenadas) {
+    for (final _TareaCompleta item in tareasOrdenadas) {
       final DateTime dia = soloDia(item.tarea.fechaLimite);
       // putIfAbsent crea la lista del día si aún no existe.
       grupos.putIfAbsent(dia, () => []).add(item);
@@ -97,10 +79,9 @@ class TodoScreenState extends State<TodoScreen> {
   }
 
   Future<void> _alternarCompletada(_TareaCompleta item) async {
-    setState(() {
-      item.tarea.completada = !item.tarea.completada;
-    });
-    await MateriaStorage.guardarMaterias(_materias);
+    item.tarea.completada = !item.tarea.completada;
+    // Guarda la lista compartida (HomeScreen redibuja todo).
+    await widget.onChanged();
   }
 
   Future<void> _editarTarea(_TareaCompleta item) async {
@@ -109,15 +90,11 @@ class TodoScreenState extends State<TodoScreen> {
       builder: (context) => FormularioTarea(tareaExistente: item.tarea),
     );
     if (editada == null) return;
-    setState(() {
-      final int indice = item.unidad.tareas.indexWhere(
-        (t) => t.id == item.tarea.id,
-      );
-      if (indice != -1) item.unidad.tareas[indice] = editada;
-      // Al cambiar la fecha, el orden puede cambiar: reordenamos.
-      _tareasOrdenadas = _aplanarYOrdenar(_materias);
-    });
-    await MateriaStorage.guardarMaterias(_materias);
+    final int indice = item.unidad.tareas.indexWhere(
+      (t) => t.id == item.tarea.id,
+    );
+    if (indice != -1) item.unidad.tareas[indice] = editada;
+    await widget.onChanged();
   }
 
   Future<void> _eliminarTarea(_TareaCompleta item) async {
@@ -139,16 +116,20 @@ class TodoScreenState extends State<TodoScreen> {
       ),
     );
     if (confirmar != true) return;
-    setState(() {
-      item.unidad.tareas.removeWhere((t) => t.id == item.tarea.id);
-      _tareasOrdenadas = _aplanarYOrdenar(_materias);
-    });
-    await MateriaStorage.guardarMaterias(_materias);
+    item.unidad.tareas.removeWhere((t) => t.id == item.tarea.id);
+    await widget.onChanged();
   }
 
   @override
   Widget build(BuildContext context) {
-    final Map<DateTime, List<_TareaCompleta>> grupos = _agruparPorDia();
+    // Se calcula en cada build desde la lista compartida,
+    // así siempre refleja lo último sin recargar del teléfono.
+    final List<_TareaCompleta> tareasOrdenadas = _aplanarYOrdenar(
+      widget.materias,
+    );
+    final Map<DateTime, List<_TareaCompleta>> grupos = _agruparPorDia(
+      tareasOrdenadas,
+    );
     final List<DateTime> diasOrdenados = grupos.keys.toList()..sort();
 
     return Scaffold(
@@ -161,11 +142,7 @@ class TodoScreenState extends State<TodoScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: _cargando
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF8B3DFF)),
-            )
-          : _tareasOrdenadas.isEmpty
+      body: tareasOrdenadas.isEmpty
           ? const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
