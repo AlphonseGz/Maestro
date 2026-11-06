@@ -60,23 +60,15 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             // Logo real de Maestro (barras morado/azul + texto MAESTRO).
             // width limita el tamaño para que no ocupe toda la pantalla.
-            Image.asset(
-              'assets/images/maestro_logo.png',
-              width: 280,
-            ),
+            Image.asset('assets/images/maestro_logo.png', width: 280),
             const SizedBox(height: 24),
             const Text(
               'Bienvenido "Concertante"',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 18,
-              ),
+              style: TextStyle(color: Colors.white70, fontSize: 18),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            const CircularProgressIndicator(
-              color: Color(0xFF8B3DFF),
-            ),
+            const CircularProgressIndicator(color: Color(0xFF8B3DFF)),
           ],
         ),
       ),

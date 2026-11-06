@@ -101,54 +101,52 @@ class _NavButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // AnimatedContainer anima el cambio de color y forma:
-            // transparente cuando no está seleccionado,
-            // círculo blanco cuando sí lo está. El ícono se invierte
-            // de blanco a oscuro al mismo tiempo.
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              width: 52,
-              height: 52,
-              // transform mueve SOLO el dibujo (efecto Transform.translate),
-              // sin ocupar espacio extra: la barra no crece ni se mueve.
-              // Matrix4.translationValues(x, y, z): y negativo = arriba.
-              transform: Matrix4.translationValues(0, -targetElevation, 0),
-              decoration: BoxDecoration(
-                color: isSelected ? Colors.white : Colors.transparent,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: isSelected
-                    ? const Color(0xFF1A0F2E)
-                    : Colors.white54,
-                size: 28,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // AnimatedContainer anima el cambio de color y forma:
+          // transparente cuando no está seleccionado,
+          // círculo blanco cuando sí lo está. El ícono se invierte
+          // de blanco a oscuro al mismo tiempo.
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            width: 52,
+            height: 52,
+            // transform mueve SOLO el dibujo (efecto Transform.translate),
+            // sin ocupar espacio extra: la barra no crece ni se mueve.
+            // Matrix4.translationValues(x, y, z): y negativo = arriba.
+            transform: Matrix4.translationValues(0, -targetElevation, 0),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.white : Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: isSelected ? const Color(0xFF1A0F2E) : Colors.white54,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 4),
+          // AnimatedOpacity anima la aparición del texto:
+          // opaco (visible) si está seleccionado,
+          // transparente (invisible) si no lo está.
+          // El texto sigue existiendo en el árbol, por eso
+          // la altura de la barra no salta al cambiar.
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            opacity: isSelected ? 1.0 : 0.0,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.white54,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
-            const SizedBox(height: 4),
-            // AnimatedOpacity anima la aparición del texto:
-            // opaco (visible) si está seleccionado,
-            // transparente (invisible) si no lo está.
-            // El texto sigue existiendo en el árbol, por eso
-            // la altura de la barra no salta al cambiar.
-            AnimatedOpacity(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              opacity: isSelected ? 1.0 : 0.0,
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.white54,
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 }

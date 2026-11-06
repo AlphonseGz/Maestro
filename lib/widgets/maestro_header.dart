@@ -15,11 +15,7 @@ class MaestroHeader extends StatelessWidget {
       color: const Color(0xFF1A0F2E),
       child: const Row(
         children: [
-          Icon(
-            Icons.music_note,
-            color: Color(0xFF8B3DFF),
-            size: 32,
-          ),
+          Icon(Icons.music_note, color: Color(0xFF8B3DFF), size: 32),
           SizedBox(width: 10),
           Text(
             'MAESTRO',

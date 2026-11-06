@@ -5,12 +5,18 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:maestro/main.dart';
 
 void main() {
-  testWidgets('Muestra la Splash con Bienvenido Concertante',
-      (WidgetTester tester) async {
+  testWidgets('Muestra la Splash con Bienvenido Concertante', (
+    WidgetTester tester,
+  ) async {
+    // shared_preferences necesita un valor inicial simulado en pruebas,
+    // porque MateriasScreen lo lee al iniciar (IndexedStack lo construye).
+    SharedPreferences.setMockInitialValues({});
+
     await tester.pumpWidget(const MaestroApp());
 
     // La Splash debe mostrar el mensaje de bienvenida y el logo.
@@ -20,8 +26,11 @@ void main() {
     // Avanzamos el tiempo 4 segundos para que la Splash
     // navegue a la pantalla principal.
     await tester.pump(const Duration(seconds: 4));
-    // Esperamos a que termine la animación de cambio de pantalla.
-    await tester.pumpAndSettle();
+    // Esperamos la animación de cambio de pantalla (300ms aprox.)
+    // y la carga de Materias, sin usar pumpAndSettle porque el
+    // indicador de carga anima sin fin y haría timeout.
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 100));
 
     // Ya no debe verse el mensaje temporal de bienvenida.
     expect(find.text('Bienvenido "Concertante"'), findsNothing);
