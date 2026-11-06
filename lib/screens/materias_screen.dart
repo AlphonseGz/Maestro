@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../models/materia.dart';
 import '../services/materia_storage.dart';
 import '../widgets/materia_card.dart';
+import 'materia_detalle_screen.dart';
 
 /// Pantalla de Materias: lista de tarjetas y botón + para crear.
 ///
@@ -61,6 +62,64 @@ class _MateriasScreenState extends State<MateriasScreen> {
     await MateriaStorage.guardarMaterias(_materias);
   }
 
+  /// Al tocar una tarjeta, entramos a su pantalla de detalle.
+  /// Al volver, redibujamos y guardamos (por si añadió unidades).
+  Future<void> _entrarAMateria(Materia materia) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => MateriaDetalleScreen(
+          materia: materia,
+          onChanged: () async {
+            await MateriaStorage.guardarMaterias(_materias);
+            if (mounted) setState(() {});
+          },
+        ),
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
+  /// Edita una materia reutilizando el mismo formulario,
+  /// pero precargado con sus datos actuales.
+  Future<void> _editarMateria(Materia materia) async {
+    final Materia? editada = await showDialog<Materia>(
+      context: context,
+      builder: (context) => _FormularioMateria(materiaExistente: materia),
+    );
+    if (editada == null) return;
+    setState(() {
+      final int indice = _materias.indexWhere((m) => m.id == materia.id);
+      if (indice != -1) _materias[indice] = editada;
+    });
+    await MateriaStorage.guardarMaterias(_materias);
+  }
+
+  /// Elimina una materia tras pedir confirmación.
+  Future<void> _eliminarMateria(Materia materia) async {
+    final bool? confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar materia'),
+        content: Text('¿Eliminar "${materia.titulo}" y sus unidades?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true) return;
+    setState(() {
+      _materias.removeWhere((m) => m.id == materia.id);
+    });
+    await MateriaStorage.guardarMaterias(_materias);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,7 +160,13 @@ class _MateriasScreenState extends State<MateriasScreen> {
               // ideal si hay muchas materias.
               itemCount: _materias.length,
               itemBuilder: (context, index) {
-                return MateriaCard(materia: _materias[index]);
+                final Materia materia = _materias[index];
+                return MateriaCard(
+                  materia: materia,
+                  onTap: () => _entrarAMateria(materia),
+                  onEdit: () => _editarMateria(materia),
+                  onDelete: () => _eliminarMateria(materia),
+                );
               },
             ),
       // Botón flotante tipo contador: abre el formulario.
@@ -116,10 +181,13 @@ class _MateriasScreenState extends State<MateriasScreen> {
   }
 }
 
-/// Diálogo con el formulario para crear una materia.
+/// Diálogo con el formulario para crear o editar una materia.
+/// Si [materiaExistente] no es null, viene precargado para editar.
 /// Devuelve una Materia con Navigator.pop, o null si se cancela.
 class _FormularioMateria extends StatefulWidget {
-  const _FormularioMateria();
+  const _FormularioMateria({this.materiaExistente});
+
+  final Materia? materiaExistente;
 
   @override
   State<_FormularioMateria> createState() => _FormularioMateriaState();
@@ -127,16 +195,27 @@ class _FormularioMateria extends StatefulWidget {
 
 class _FormularioMateriaState extends State<_FormularioMateria> {
   /// Controlador del campo de texto del título.
-  final TextEditingController _tituloController = TextEditingController();
+  late final TextEditingController _tituloController;
 
-  /// Color elegido en el selector. Empieza en morado de Maestro.
-  Color _colorElegido = const Color(0xFF8B3DFF);
+  /// Color elegido en el selector. Empieza en morado de Maestro,
+  /// o en el color actual si estamos editando.
+  late Color _colorElegido;
 
   /// Ruta de la foto elegida de la galería. null = sin foto.
   String? _fotoPath;
 
   /// Instancia de image_picker para abrir la galería.
   final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _tituloController = TextEditingController(
+      text: widget.materiaExistente?.titulo ?? '',
+    );
+    _colorElegido = widget.materiaExistente?.color ?? const Color(0xFF8B3DFF);
+    _fotoPath = widget.materiaExistente?.fotoPath;
+  }
 
   @override
   void dispose() {
@@ -195,8 +274,9 @@ class _FormularioMateriaState extends State<_FormularioMateria> {
     }
   }
 
-  /// Valida el formulario y devuelve la nueva materia.
-  /// Si el título está vacío, no permite crear.
+  /// Valida el formulario y devuelve la materia.
+  /// Si el título está vacío, no permite guardar.
+  /// Al editar, conserva el id y las unidades de la original.
   void _guardarMateria() {
     final String titulo = _tituloController.text.trim();
     if (titulo.isEmpty) {
@@ -205,20 +285,28 @@ class _FormularioMateriaState extends State<_FormularioMateria> {
       );
       return;
     }
+    final Materia? existente = widget.materiaExistente;
     Navigator.pop(
       context,
-      Materia(
-        titulo: titulo,
-        colorValue: _colorElegido.toARGB32(),
-        fotoPath: _fotoPath,
-      ),
+      existente != null
+          ? existente.copyWith(
+              titulo: titulo,
+              colorValue: _colorElegido.toARGB32(),
+              fotoPath: _fotoPath,
+            )
+          : Materia(
+              titulo: titulo,
+              colorValue: _colorElegido.toARGB32(),
+              fotoPath: _fotoPath,
+            ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool esEdicion = widget.materiaExistente != null;
     return AlertDialog(
-      title: const Text('Nueva materia'),
+      title: Text(esEdicion ? 'Editar materia' : 'Nueva materia'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
