@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import '../widgets/maestro_bottom_nav.dart';
 import '../widgets/maestro_header.dart';
 import 'materias_screen.dart';
+import 'todo_screen.dart';
 
 /// Pantalla principal de Maestro.
 ///
 /// Muestra el encabezado y la barra inferior. Según la pestaña
 /// seleccionada, cambia el contenido central con IndexedStack:
-/// mantiene vivas las 3 pantallas y solo muestra la activa,
-/// así la lista de Materias no se pierde al cambiar de pestaña.
+/// mantiene vivas las pantallas y solo muestra la activa.
 ///
 /// Es StatefulWidget porque el contenido cambia al pulsar la barra.
 class HomeScreen extends StatefulWidget {
@@ -24,15 +24,25 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 0 = To do, 1 = Profile, 2 = Materias.
   int _selectedIndex = 0;
 
+  /// Llave para poder llamar a recargarTareas() de TodoScreen
+  /// cuando entras a la pestaña To do, así ves lo último creado
+  /// en las unidades aunque la pantalla haya quedado "viva"
+  /// en el IndexedStack.
+  final GlobalKey<TodoScreenState> _todoKey = GlobalKey<TodoScreenState>();
+
   /// Método que se ejecuta al pulsar un botón de la barra.
   /// [index] es el número de la pestaña pulsada.
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
+    // Al entrar a To do, recargamos sus tareas desde el teléfono.
+    if (index == 0) {
+      _todoKey.currentState?.recargarTareas();
+    }
   }
 
-  /// Pantalla temporal para To do y Profile hasta que las desarrollemos.
+  /// Pantalla temporal para Profile hasta que la desarrollemos.
   Widget _pantallaEnConstruccion(IconData icono, String titulo) {
     return Center(
       child: Column(
@@ -72,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: IndexedStack(
                 index: _selectedIndex,
                 children: [
-                  _pantallaEnConstruccion(Icons.check_circle_outline, 'To do'),
+                  TodoScreen(key: _todoKey),
                   _pantallaEnConstruccion(Icons.person_outline, 'Profile'),
                   const MateriasScreen(),
                 ],

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/materia.dart';
+import '../models/tarea.dart';
 import '../models/unidad.dart';
+import '../widgets/formulario_tarea_dialog.dart';
 import '../widgets/unidad_top_nav.dart';
 
 /// Pantalla de detalle de una materia.
@@ -35,6 +37,63 @@ class _MateriaDetalleScreenState extends State<MateriaDetalleScreen> {
     setState(() {
       _selectedUnitIndex = index;
     });
+  }
+
+  /// Abre el diálogo para crear una tarea en la unidad seleccionada.
+  Future<void> _abrirFormularioNuevaTarea() async {
+    if (widget.materia.unidades.isEmpty) return;
+    final Unidad unidadSeleccionada =
+        widget.materia.unidades[_selectedUnitIndex];
+    final Tarea? nuevaTarea = await showDialog<Tarea>(
+      context: context,
+      builder: (context) => const FormularioTarea(),
+    );
+    if (nuevaTarea == null) return;
+    setState(() {
+      unidadSeleccionada.tareas.add(nuevaTarea);
+    });
+    widget.onChanged();
+  }
+
+  /// El botón + abre un menú inferior con dos opciones:
+  /// Nueva unidad o Nueva tarea. Si no hay unidades, solo unidad.
+  Future<void> _abrirMenuCrear() async {
+    if (widget.materia.unidades.isEmpty) {
+      await _abrirFormularioNuevaUnidad();
+      return;
+    }
+    final String? opcion = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF241340),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.account_tree, color: Colors.white),
+              title: const Text(
+                'Nueva unidad',
+                style: TextStyle(color: Colors.white),
+              ),
+              onTap: () => Navigator.pop(context, 'unidad'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.task_alt, color: Colors.white),
+              title: const Text(
+                'Nueva tarea',
+                style: TextStyle(color: Colors.white),
+              ),
+              onTap: () => Navigator.pop(context, 'tarea'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (opcion == 'unidad') {
+      await _abrirFormularioNuevaUnidad();
+    } else if (opcion == 'tarea') {
+      await _abrirFormularioNuevaTarea();
+    }
   }
 
   /// Abre el diálogo para crear una unidad nueva en esta materia.
@@ -161,10 +220,10 @@ class _MateriaDetalleScreenState extends State<MateriaDetalleScreen> {
               ],
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _abrirFormularioNuevaUnidad,
+        onPressed: _abrirMenuCrear,
         backgroundColor: const Color(0xFF8B3DFF),
         foregroundColor: Colors.white,
-        tooltip: 'Añadir unidad',
+        tooltip: 'Crear unidad o tarea',
         child: const Icon(Icons.add),
       ),
     );
