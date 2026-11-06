@@ -84,19 +84,23 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // El botón central siempre va un poco más alto.
-    // El seleccionado sube un poco más. AnimatedPadding anima
-    // esta subida, así no hay un salto brusco al cambiar.
-    final double baseElevation = isCenter ? 8 : 0;
-    final double selectedElevation = isSelected ? 6 : 0;
+    // Cuánto debe subir el ícono SOLO visualmente:
+    // - Lateral sin seleccionar: 0px (en su sitio)
+    // - Lateral seleccionado: sube 10px
+    // - Central sin seleccionar: base de 8px (siempre más alto)
+    // - Central seleccionado: 8px base + 6px extra = 14px
+    //
+    // En vez de Padding (que sí ocupa espacio y movía la barra),
+    // usamos la propiedad transform de AnimatedContainer: mueve el
+    // dibujo sin cambiar el tamaño que ocupa en el layout.
+    // La barra nunca crece.
+    final double targetElevation = isCenter
+        ? (isSelected ? 14 : 8)
+        : (isSelected ? 10 : 0);
 
     return InkWell(
       onTap: onTap,
-      child: AnimatedPadding(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        padding: EdgeInsets.only(bottom: baseElevation + selectedElevation),
-        child: Column(
+      child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // AnimatedContainer anima el cambio de color y forma:
@@ -108,6 +112,10 @@ class _NavButton extends StatelessWidget {
               curve: Curves.easeInOut,
               width: 52,
               height: 52,
+              // transform mueve SOLO el dibujo (efecto Transform.translate),
+              // sin ocupar espacio extra: la barra no crece ni se mueve.
+              // Matrix4.translationValues(x, y, z): y negativo = arriba.
+              transform: Matrix4.translationValues(0, -targetElevation, 0),
               decoration: BoxDecoration(
                 color: isSelected ? Colors.white : Colors.transparent,
                 shape: BoxShape.circle,
@@ -141,7 +149,6 @@ class _NavButton extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
