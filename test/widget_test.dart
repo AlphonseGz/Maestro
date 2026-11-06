@@ -3,6 +3,7 @@
 // Comprueba que la app arranca y muestra la pantalla temporal
 // de bienvenida con el mensaje Bienvenido "Concertante".
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:maestro/main.dart';
@@ -12,18 +13,20 @@ void main() {
       (WidgetTester tester) async {
     await tester.pumpWidget(const MaestroApp());
 
-    // La Splash debe mostrar el mensaje de bienvenida.
+    // La Splash debe mostrar el mensaje de bienvenida y el logo.
     expect(find.text('Bienvenido "Concertante"'), findsOneWidget);
-    expect(find.text('MAESTRO'), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
 
-    // Avanzamos el tiempo 2 segundos para que la Splash
+    // Avanzamos el tiempo 4 segundos para que la Splash
     // navegue a la pantalla principal.
-    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 4));
     // Esperamos a que termine la animación de cambio de pantalla.
     await tester.pumpAndSettle();
 
     // Ya no debe verse el mensaje temporal de bienvenida.
     expect(find.text('Bienvenido "Concertante"'), findsNothing);
+    // En la pantalla principal sí aparece MAESTRO en el encabezado.
+    expect(find.text('MAESTRO'), findsOneWidget);
     // La barra inferior debe mostrar las 3 opciones.
     // "To do" aparece dos veces: título de la página inicial y botón de la barra.
     expect(find.text('To do'), findsWidgets);

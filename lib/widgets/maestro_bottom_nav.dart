@@ -7,6 +7,10 @@ import 'package:flutter/material.dart';
 /// - [onItemTapped]: función que avisa a la pantalla principal
 ///   cuando el usuario pulsa un botón. Así este Widget no guarda
 ///   el estado, solo muestra la barra.
+///
+/// Los 3 botones se comportan igual: solo el seleccionado se
+/// encierra en un círculo blanco, invierte sus colores y
+/// muestra su texto. Al cambiar de pestaña, todo se anima.
 class MaestroBottomNav extends StatelessWidget {
   const MaestroBottomNav({
     super.key,
@@ -66,58 +70,73 @@ class _NavButton extends StatelessWidget {
   /// Ícono a mostrar (check, persona o libro).
   final IconData icon;
 
-  /// Texto debajo del ícono.
+  /// Texto debajo del ícono. Solo se ve cuando está seleccionado.
   final String label;
 
-  /// Si esta pestaña es la activa, se muestra más brillante.
+  /// Si esta pestaña es la activa, se encierra e invierte colores.
   final bool isSelected;
 
   /// Qué hacer cuando se pulsa.
   final VoidCallback onTap;
 
-  /// Si es el botón central de Profile, se dibuja elevado e invertido.
+  /// Si es el botón central de Profile, mantiene una elevación base.
   final bool isCenter;
 
   @override
   Widget build(BuildContext context) {
-    // El botón del centro va ligeramente más alto que los demás.
-    final double verticalOffset = isCenter ? -14 : 0;
+    // El botón central siempre va un poco más alto.
+    // El seleccionado sube un poco más. AnimatedPadding anima
+    // esta subida, así no hay un salto brusco al cambiar.
+    final double baseElevation = isCenter ? 8 : 0;
+    final double selectedElevation = isSelected ? 6 : 0;
 
     return InkWell(
       onTap: onTap,
-      child: Transform.translate(
-        offset: Offset(0, verticalOffset),
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        padding: EdgeInsets.only(bottom: baseElevation + selectedElevation),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (isCenter)
-              // Círculo con colores invertidos: fondo blanco, persona oscura.
-              Container(
-                width: 56,
-                height: 56,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  icon,
-                  color: const Color(0xFF1A0F2E),
-                  size: 32,
-                ),
-              )
-            else
-              Icon(
+            // AnimatedContainer anima el cambio de color y forma:
+            // transparente cuando no está seleccionado,
+            // círculo blanco cuando sí lo está. El ícono se invierte
+            // de blanco a oscuro al mismo tiempo.
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white : Colors.transparent,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
                 icon,
-                color: isSelected ? Colors.white : Colors.white54,
+                color: isSelected
+                    ? const Color(0xFF1A0F2E)
+                    : Colors.white54,
                 size: 28,
               ),
+            ),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white54,
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            // AnimatedOpacity anima la aparición del texto:
+            // opaco (visible) si está seleccionado,
+            // transparente (invisible) si no lo está.
+            // El texto sigue existiendo en el árbol, por eso
+            // la altura de la barra no salta al cambiar.
+            AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              opacity: isSelected ? 1.0 : 0.0,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.white54,
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
               ),
             ),
           ],

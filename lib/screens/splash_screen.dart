@@ -28,8 +28,8 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     // initState se ejecuta una sola vez, justo al crear la pantalla.
-    // Programamos el cambio de pantalla a los 2 segundos.
-    _timer = Timer(const Duration(seconds: 2), _goToHome);
+    // Programamos el cambio de pantalla a los 4 segundos.
+    _timer = Timer(const Duration(seconds: 4), _goToHome);
   }
 
   /// Método que navega a la pantalla principal.
@@ -58,22 +58,13 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.music_note,
-              size: 72,
-              color: Color(0xFF8B3DFF),
+            // Logo real de Maestro (barras morado/azul + texto MAESTRO).
+            // width limita el tamaño para que no ocupe toda la pantalla.
+            Image.asset(
+              'assets/images/maestro_logo.png',
+              width: 280,
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'MAESTRO',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 4,
-              ),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 24),
             const Text(
               'Bienvenido "Concertante"',
               style: TextStyle(
