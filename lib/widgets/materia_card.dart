@@ -8,8 +8,9 @@ import '../models/materia.dart';
 ///
 /// Fondo con degradado moderno usando el color de la materia,
 /// título arriba, "0/0 Tasks" debajo y barra de progreso fina.
-/// A la derecha, arriba, un menú de 3 puntos (editar/eliminar)
-/// y debajo la foto si existe, o un ícono de libro.
+/// A la derecha va la foto si existe, o un ícono de libro.
+/// Los 3 puntos quedan pegados a la esquina superior derecha
+/// de la tarjeta (con Stack + Positioned), no centrados.
 ///
 /// Tocar la tarjeta (fuera del menú) entra a la materia:
 /// eso lo maneja [onTap], que pasa la pantalla principal.
@@ -52,101 +53,110 @@ class MateriaCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Columna de textos: título, tareas y barra de progreso.
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        materia.titulo,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${materia.tareasCompletadas}/${materia.tareasTotales} Tasks',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      // Barra de progreso fina y redondeada, como en la foto.
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: LinearProgressIndicator(
-                          value: materia.progreso,
-                          minHeight: 8,
-                          backgroundColor: Colors.white38,
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$porcentaje%',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Columna derecha: menú de 3 puntos arriba de la foto.
-                Column(
-                  mainAxisSize: MainAxisSize.min,
+          // Stack permite poner el menú "encima" de la tarjeta,
+          // fijado a una esquina con Positioned.
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
                   children: [
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert, color: Colors.white),
-                      color: const Color(0xFF241340),
-                      onSelected: (value) {
-                        if (value == 'editar') onEdit?.call();
-                        if (value == 'eliminar') onDelete?.call();
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'editar',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit, color: Colors.white),
-                              SizedBox(width: 8),
-                              Text(
-                                'Editar',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ],
+                    // Columna de textos: título, tareas y barra de progreso.
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Espacio arriba para que el título no quede
+                          // debajo del menú de la esquina.
+                          const SizedBox(height: 28),
+                          Text(
+                            materia.titulo,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'eliminar',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, color: Colors.redAccent),
-                              SizedBox(width: 8),
-                              Text(
-                                'Eliminar',
-                                style: TextStyle(color: Colors.redAccent),
-                              ),
-                            ],
+                          const SizedBox(height: 4),
+                          Text(
+                            '${materia.tareasCompletadas}/${materia.tareasTotales} Tasks',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 10),
+                          // Barra de progreso fina y redondeada, como en la foto.
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: LinearProgressIndicator(
+                              value: materia.progreso,
+                              minHeight: 8,
+                              backgroundColor: Colors.white38,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$porcentaje%',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    _FotoMateria(fotoPath: materia.fotoPath),
+                    const SizedBox(width: 12),
+                    // Foto o ícono de libro a la derecha, alineado abajo.
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: _FotoMateria(fotoPath: materia.fotoPath),
+                    ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              // Menú de 3 puntos pegado a la esquina superior derecha.
+              Positioned(
+                top: 2,
+                right: 2,
+                child: PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                  color: const Color(0xFF241340),
+                  onSelected: (value) {
+                    if (value == 'editar') onEdit?.call();
+                    if (value == 'eliminar') onDelete?.call();
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'editar',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text('Editar', style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'eliminar',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.redAccent),
+                          SizedBox(width: 8),
+                          Text(
+                            'Eliminar',
+                            style: TextStyle(color: Colors.redAccent),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

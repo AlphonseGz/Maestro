@@ -288,17 +288,18 @@ class _FormularioMateriaState extends State<_FormularioMateria> {
     final Materia? existente = widget.materiaExistente;
     Navigator.pop(
       context,
-      existente != null
-          ? existente.copyWith(
-              titulo: titulo,
-              colorValue: _colorElegido.toARGB32(),
-              fotoPath: _fotoPath,
-            )
-          : Materia(
-              titulo: titulo,
-              colorValue: _colorElegido.toARGB32(),
-              fotoPath: _fotoPath,
-            ),
+      // Construimos la materia a mano (no copyWith) para poder
+      // quitar la foto: si _fotoPath es null, la materia queda sin foto,
+      // conservando el id y las unidades de la original.
+      Materia(
+        id: existente?.id,
+        titulo: titulo,
+        colorValue: _colorElegido.toARGB32(),
+        fotoPath: _fotoPath,
+        tareasTotales: existente?.tareasTotales ?? 0,
+        tareasCompletadas: existente?.tareasCompletadas ?? 0,
+        unidades: existente?.unidades,
+      ),
     );
   }
 
@@ -337,6 +338,8 @@ class _FormularioMateriaState extends State<_FormularioMateria> {
               onTap: _abrirSelectorDeColor,
             ),
             // Fila de la foto: vista previa o botón para elegirla.
+            // Si ya hay foto, un botón de papelera la quita
+            // (solo la foto, la materia se conserva).
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: _fotoPath == null
@@ -351,7 +354,17 @@ class _FormularioMateriaState extends State<_FormularioMateria> {
                       ),
                     ),
               title: const Text('Foto (opcional)'),
-              trailing: const Icon(Icons.photo),
+              trailing: _fotoPath == null
+                  ? const Icon(Icons.photo)
+                  : IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      tooltip: 'Quitar foto',
+                      onPressed: () {
+                        setState(() {
+                          _fotoPath = null;
+                        });
+                      },
+                    ),
               onTap: _elegirFotoDeGaleria,
             ),
           ],
@@ -362,7 +375,10 @@ class _FormularioMateriaState extends State<_FormularioMateria> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
-        ElevatedButton(onPressed: _guardarMateria, child: const Text('Añadir')),
+        ElevatedButton(
+          onPressed: _guardarMateria,
+          child: Text(esEdicion ? 'Guardar' : 'Añadir'),
+        ),
       ],
     );
   }

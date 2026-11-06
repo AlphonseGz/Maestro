@@ -52,6 +52,54 @@ class _MateriaDetalleScreenState extends State<MateriaDetalleScreen> {
     widget.onChanged();
   }
 
+  /// Edita la unidad seleccionada reutilizando el mismo formulario,
+  /// precargado con su nombre e ícono actuales.
+  Future<void> _editarUnidad() async {
+    final Unidad unidadActual = widget.materia.unidades[_selectedUnitIndex];
+    final Unidad? editada = await showDialog<Unidad>(
+      context: context,
+      builder: (context) => _FormularioUnidad(unidadExistente: unidadActual),
+    );
+    if (editada == null) return;
+    setState(() {
+      widget.materia.unidades[_selectedUnitIndex] = editada;
+    });
+    widget.onChanged();
+  }
+
+  /// Elimina la unidad seleccionada tras pedir confirmación.
+  Future<void> _eliminarUnidad() async {
+    final Unidad unidadActual = widget.materia.unidades[_selectedUnitIndex];
+    final bool? confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar unidad'),
+        content: Text('¿Eliminar "${unidadActual.nombre}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true) return;
+    setState(() {
+      widget.materia.unidades.removeAt(_selectedUnitIndex);
+      // Si borramos la última, seleccionamos la anterior (o 0 si vacía).
+      if (_selectedUnitIndex >= widget.materia.unidades.length) {
+        _selectedUnitIndex = widget.materia.unidades.isEmpty
+            ? 0
+            : widget.materia.unidades.length - 1;
+      }
+    });
+    widget.onChanged();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -106,6 +154,8 @@ class _MateriaDetalleScreenState extends State<MateriaDetalleScreen> {
                 Expanded(
                   child: _ContenidoUnidad(
                     unidad: widget.materia.unidades[_selectedUnitIndex],
+                    onEdit: _editarUnidad,
+                    onDelete: _eliminarUnidad,
                   ),
                 ),
               ],
@@ -125,55 +175,113 @@ class _MateriaDetalleScreenState extends State<MateriaDetalleScreen> {
 /// Por ahora solo muestra su ícono y nombre; el contenido
 /// real (tareas, etc.) se desarrollará en pasos siguientes.
 class _ContenidoUnidad extends StatelessWidget {
-  const _ContenidoUnidad({required this.unidad});
+  const _ContenidoUnidad({required this.unidad, this.onEdit, this.onDelete});
 
   final Unidad unidad;
 
+  /// Qué hacer al elegir Editar en los 3 puntos de la unidad.
+  final VoidCallback? onEdit;
+
+  /// Qué hacer al elegir Eliminar en los 3 puntos de la unidad.
+  final VoidCallback? onDelete;
+
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Unidad.iconoPorClave(unidad.iconoClave),
-            color: Colors.white54,
-            size: 64,
+    return Stack(
+      children: [
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Unidad.iconoPorClave(unidad.iconoClave),
+                color: Colors.white54,
+                size: 64,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                unidad.nombre,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Contenido en construcción',
+                style: TextStyle(color: Colors.white54),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            unidad.nombre,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+        ),
+        // Menú de 3 puntos en la esquina superior derecha del contenido.
+        Positioned(
+          top: 4,
+          right: 4,
+          child: PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            color: const Color(0xFF241340),
+            onSelected: (value) {
+              if (value == 'editar') onEdit?.call();
+              if (value == 'eliminar') onDelete?.call();
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'editar',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('Editar', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'eliminar',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, color: Colors.redAccent),
+                    SizedBox(width: 8),
+                    Text('Eliminar', style: TextStyle(color: Colors.redAccent)),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Contenido en construcción',
-            style: TextStyle(color: Colors.white54),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-/// Diálogo para crear una unidad: pide nombre e ícono.
+/// Diálogo para crear o editar una unidad: pide nombre e ícono.
+/// Si [unidadExistente] no es null, viene precargado para editar.
 /// Devuelve una Unidad, o null si se cancela.
 class _FormularioUnidad extends StatefulWidget {
-  const _FormularioUnidad();
+  const _FormularioUnidad({this.unidadExistente});
+
+  final Unidad? unidadExistente;
 
   @override
   State<_FormularioUnidad> createState() => _FormularioUnidadState();
 }
 
 class _FormularioUnidadState extends State<_FormularioUnidad> {
-  final TextEditingController _nombreController = TextEditingController();
+  late final TextEditingController _nombreController;
 
-  /// Clave del ícono elegido. Por defecto 'punto'.
-  String _iconoClaveElegida = 'punto';
+  /// Clave del ícono elegido. Por defecto 'punto',
+  /// o el ícono actual si estamos editando.
+  late String _iconoClaveElegida;
+
+  @override
+  void initState() {
+    super.initState();
+    _nombreController = TextEditingController(
+      text: widget.unidadExistente?.nombre ?? '',
+    );
+    _iconoClaveElegida = widget.unidadExistente?.iconoClave ?? 'punto';
+  }
 
   @override
   void dispose() {
@@ -197,8 +305,9 @@ class _FormularioUnidadState extends State<_FormularioUnidad> {
 
   @override
   Widget build(BuildContext context) {
+    final bool esEdicion = widget.unidadExistente != null;
     return AlertDialog(
-      title: const Text('Nueva unidad'),
+      title: Text(esEdicion ? 'Editar unidad' : 'Nueva unidad'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -257,7 +366,10 @@ class _FormularioUnidadState extends State<_FormularioUnidad> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
-        ElevatedButton(onPressed: _guardarUnidad, child: const Text('Añadir')),
+        ElevatedButton(
+          onPressed: _guardarUnidad,
+          child: Text(esEdicion ? 'Guardar' : 'Añadir'),
+        ),
       ],
     );
   }
