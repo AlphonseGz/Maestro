@@ -4,6 +4,7 @@ import '../models/materia.dart';
 import '../models/tarea.dart';
 import '../models/unidad.dart';
 import '../utils/fecha_formato.dart';
+import '../widgets/detalle_tarea_dialog.dart';
 import '../widgets/formulario_tarea_dialog.dart';
 import '../widgets/tarea_card.dart';
 
@@ -78,6 +79,17 @@ class _TodoScreenState extends State<TodoScreen> {
     return grupos;
   }
 
+  Future<void> _mostrarDetalle(_TareaCompleta item) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => DetalleTareaDialog(
+        tarea: item.tarea,
+        nombreMateria: item.materia.titulo,
+        nombreUnidad: item.unidad.nombre,
+      ),
+    );
+  }
+
   Future<void> _alternarCompletada(_TareaCompleta item) async {
     item.tarea.completada = !item.tarea.completada;
     // Guarda la lista compartida (HomeScreen redibuja todo).
@@ -138,7 +150,7 @@ class _TodoScreenState extends State<TodoScreen> {
         backgroundColor: const Color(0xFF1A0F2E),
         foregroundColor: Colors.white,
         title: const Text(
-          'To do',
+          'To Do list',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
@@ -193,6 +205,7 @@ class _TodoScreenState extends State<TodoScreen> {
                         iconoUnidad: Unidad.iconoPorClave(
                           item.unidad.iconoClave,
                         ),
+                        onTap: () => _mostrarDetalle(item),
                         onToggleCompletada: () => _alternarCompletada(item),
                         onEdit: () => _editarTarea(item),
                         onDelete: () => _eliminarTarea(item),

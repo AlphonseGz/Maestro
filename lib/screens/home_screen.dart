@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/materia.dart';
 import '../services/materia_storage.dart';
+import '../services/notificacion_service.dart';
 import '../widgets/maestro_bottom_nav.dart';
 import '../widgets/maestro_header.dart';
 import 'materias_screen.dart';
@@ -45,16 +46,36 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _cargarMaterias() async {
     final List<Materia> guardadas = await MateriaStorage.cargarMaterias();
     if (!mounted) return;
+    // Auto-delete al abrir la app: si una tarea con auto-delete
+    // ya pasó su hora límite + 2 minutos, se borra sola ahora.
+    final DateTime ahora = DateTime.now();
+    bool huboBorrados = false;
+    for (final Materia materia in guardadas) {
+      for (final unidad in materia.unidades) {
+        final int antes = unidad.tareas.length;
+        unidad.tareas.removeWhere(
+          (tarea) =>
+              tarea.autoDelete &&
+              ahora.isAfter(tarea.fechaLimite.add(const Duration(minutes: 2))),
+        );
+        if (unidad.tareas.length != antes) huboBorrados = true;
+      }
+    }
     setState(() {
       _materias = guardadas;
       _cargando = false;
     });
+    if (huboBorrados) await MateriaStorage.guardarMaterias(_materias);
+    // (Re)programamos las notificaciones con la lista actual.
+    await NotificacionService.sincronizar(_materias);
   }
 
   /// Guarda la lista compartida en el teléfono y redibuja.
   /// La llaman To do y Materias cuando cambian algo.
+  /// También sincroniza las notificaciones programadas.
   Future<void> _guardarMaterias() async {
     await MateriaStorage.guardarMaterias(_materias);
+    await NotificacionService.sincronizar(_materias);
     if (mounted) setState(() {});
   }
 

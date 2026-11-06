@@ -24,6 +24,9 @@ class _FormularioTareaState extends State<FormularioTarea> {
   /// Fecha y hora límite elegidas. Por defecto: mañana a las 22:00.
   late DateTime _fechaLimite;
 
+  /// Interruptor de auto-delete. Apagado por defecto.
+  late bool _autoDelete;
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +39,7 @@ class _FormularioTareaState extends State<FormularioTarea> {
     _fechaLimite =
         widget.tareaExistente?.fechaLimite ??
         DateTime.now().add(const Duration(days: 1, hours: 22));
+    _autoDelete = widget.tareaExistente?.autoDelete ?? false;
   }
 
   @override
@@ -96,11 +100,13 @@ class _FormularioTareaState extends State<FormularioTarea> {
               titulo: titulo,
               descripcion: descripcion,
               fechaLimite: _fechaLimite,
+              autoDelete: _autoDelete,
             )
           : Tarea(
               titulo: titulo,
               descripcion: descripcion,
               fechaLimite: _fechaLimite,
+              autoDelete: _autoDelete,
             ),
     );
   }
@@ -144,6 +150,19 @@ class _FormularioTareaState extends State<FormularioTarea> {
               ),
               trailing: const Icon(Icons.edit_calendar),
               onTap: _elegirFechaLimite,
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Auto-delete'),
+              subtitle: const Text(
+                'Borrar sola 2 min después de la hora límite',
+              ),
+              value: _autoDelete,
+              onChanged: (valor) {
+                setState(() {
+                  _autoDelete = valor;
+                });
+              },
             ),
           ],
         ),

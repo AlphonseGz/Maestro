@@ -98,6 +98,44 @@ void main() {
     );
   });
 
+  test('Tarea guarda autoDelete y creadaEn en JSON', () {
+    final Tarea original = Tarea(
+      titulo: 'Quiz',
+      descripcion: 'Desc',
+      fechaLimite: DateTime(2026, 11, 12, 22),
+      creadaEn: DateTime(2026, 11, 10, 9),
+      autoDelete: true,
+    );
+
+    final Tarea restaurada = Tarea.fromJson(original.toJson());
+
+    expect(restaurada.autoDelete, true);
+    expect(restaurada.creadaEn, DateTime(2026, 11, 10, 9));
+  });
+
+  testWidgets('TareaCard muestra aviso Vence hoy si vence hoy', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TareaCard(
+            tarea: Tarea(
+              titulo: 'Hoy',
+              descripcion: 'Desc',
+              fechaLimite: DateTime.now().add(const Duration(hours: 2)),
+            ),
+            colorMateria: const Color(0xFF8B3DFF),
+            nombreMateria: 'Física',
+            iconoUnidad: Icons.menu_book,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('¡Vence hoy!'), findsOneWidget);
+  });
+
   testWidgets('TareaCard muestra título, descripción y materia', (
     WidgetTester tester,
   ) async {

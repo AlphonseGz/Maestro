@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/materia.dart';
 import '../models/tarea.dart';
 import '../models/unidad.dart';
+import '../services/notificacion_service.dart';
 import '../widgets/formulario_tarea_dialog.dart';
 import '../widgets/unidad_top_nav.dart';
 
@@ -42,8 +43,12 @@ class _MateriaDetalleScreenState extends State<MateriaDetalleScreen> {
   }
 
   /// Abre el diálogo para crear una tarea en la unidad seleccionada.
+  /// La primera vez que se crea una tarea, pide el permiso de
+  /// notificaciones (Android 13+); después ya no molesta.
   Future<void> _abrirFormularioNuevaTarea() async {
     if (widget.materia.unidades.isEmpty) return;
+    await NotificacionService.solicitarPermiso();
+    if (!mounted) return;
     final Unidad unidadSeleccionada =
         widget.materia.unidades[_selectedUnitIndex];
     final Tarea? nuevaTarea = await showDialog<Tarea>(
